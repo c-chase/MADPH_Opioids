@@ -15,6 +15,7 @@ library(devtools)
 library(urbnmapr)
 library(readxl)
 library(viridis)
+library(fastDummies)
 
 # read in 2016-2019 data
 Rx <- read_excel(
@@ -65,16 +66,23 @@ full.rx <- Rx.q1 %>%
     full_join(Rx.q3) %>% 
     full_join(Rx) %>% 
     set_names( c("County", "Population", "Total Rx", "Total Rx Units", "N.People w/ Rx", "Percent of County Pop w/ Rx", "Year", "Quarter")) %>%  #renaming all of the names
-    mutate(county_name = paste(County, "County"))  #mutating a new column, county_name...on the other side is the expression to make a row. paste from the currently existing column, "County," and then add the string "County". It's evaluated on a row by row basis.  
-
+    mutate(county_name = paste(County, "County")) %>%   #mutating a new column, county_name...on the other side is the expression to make a row. paste from the currently existing column, "County," and then add the string "County". It's evaluated on a row by row basis.  
+    dummy_rows(select_columns = c("Year", "Quarter", "County")) #making dummy rows for NAs
 
 #define "test"
 test <- c("#f2f0f7", "#dadaeb", "#bcbddc", "#9e9ac8", "#756bb1", "#54278f")
 
 
+#"ma.percents" just has the year, the quarter, and the % of the population reciving a scheduled Rx for all of MA.
+ma.percents <- full.rx %>%  #making a dataframe called ma.percents
+    filter(County == "MA") %>%  #we only want to look at "MA" in the County data
+    select(Year, Quarter, `Percent of County Pop w/ Rx`) %>%  #select picks only "year", "quarter", and that percent
+    rename(ma.percent = `Percent of County Pop w/ Rx`) #renaming so that a later join will result in a new column
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
+    
+    
 
     # Application title
     titlePanel("MA Schedule II Rx by County"),
@@ -84,6 +92,7 @@ ui <- fluidPage(
         sidebarPanel(
             sliderInput("year",
                         "Year:",
+                        sep = "", #gets rid of commas in year
                         min = 2015,
                         max = 2020,
                         value = 2015),
@@ -95,8 +104,9 @@ ui <- fluidPage(
         ),
 
         # Show a plot of the generated distribution
-        mainPanel(
-           plotOutput("map1")
+        
+        mainPanel(plotOutput("map1"), plotOutput("map2")
+           
         )
     )
 )
@@ -118,10 +128,28 @@ server <- function(input, output) {
             coord_map(projection = "albers", lat0 = 39, lat1 = 45)+
             geom_polygon(color = "#ffffff", size = .25) +
             theme_void() +
-            scale_fill_gradientn(colors = test) 
+            scale_fill_viridis(colors = test, limits = c(0,10), na.value = "orange") #"limits" gives upper and lower bound 
+        
     })
     
-    
+    output$map2 <- renderPlot({
+        full.rx %>% #piping in full.rx, and doing a left join with the dataframe that we just made 
+            left_join(ma.percents) %>% #bc full.rx is piped in, it's the left hand dataframe
+            mutate(difference = `Percent of County Pop w/ Rx` - ma.percent) %>% #making a column called "difference"...diff btwn county %age and MA %age
+            # view()
+            filter(County != "MA") %>% #removing MA county
+            left_join(counties, by="county_name") %>% #joining it into the counties dataframe, which we need to make a map
+            filter(state_name == "Massachusetts") %>% 
+            filter(Year == input$year, Quarter == input$quarter) %>% 
+            ggplot() +
+            aes(long, lat, group = group, fill = `difference`) +
+            geom_polygon(color = "gray", size = 0.25) +
+            coord_map(projection = "albers", lat0 = 39, lat1 = 45) +
+            theme_void() +
+            scale_fill_distiller(type = "div", palette = "PRGn", na.value = "orange") + #type div = divergent--we want it to diverge from 0
+            labs(title = "Difference from State % of Pop. Receiving Schedule 2 Rx by County")
+        })
+        
 }
 
 # Run the application 

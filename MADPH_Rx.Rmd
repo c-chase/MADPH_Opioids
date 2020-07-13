@@ -5,12 +5,16 @@ date: "7/7/2020"
 output: html_document
 ---
 
+
+
+
 ```{r}
 library(tidyverse)
 library(devtools)
 library(urbnmapr)
 library(readxl)
 library(viridis)
+library(fastDummies)
 ```
 
 #reading in quarter information for 2016 to 2019
@@ -87,7 +91,8 @@ full.rx <- Rx.q1 %>%
   full_join(Rx.q3) %>% 
   full_join(Rx) %>% 
   set_names( c("County", "Population", "Total Rx", "Total Rx Units", "N.People w/ Rx", "Percent of County Pop w/ Rx", "Year", "Quarter")) %>%  #renaming all of the names
-  mutate(county_name = paste(County, "County"))  #mutating a new column, county_name...on the other side is the expression to make a row. paste from the currently existing column, "County," and then add the string "County". It's evaluated on a row by row basis.  
+  mutate(county_name = paste(County, "County")) %>%   #mutating a new column, county_name...on the other side is the expression to make a row. paste from the currently existing column, "County," and then add the string "County". It's evaluated on a row by row basis.  
+  dummy_rows(select_columns = c("Year", "Quarter", "County"))
   
 ```
 
@@ -139,7 +144,7 @@ full.rx %>%
   coord_map(projection = "albers", lat0 = 39, lat1 = 45)+
   geom_polygon(color = "#ffffff", size = .25) +
   theme_void() +
-  scale_fill_gradientn(colors = test) 
+  scale_fill_viridis(colors = test) 
 ```
 
 
@@ -176,7 +181,7 @@ full.rx %>% #piping in full.rx, and doing a left join with the dataframe that we
     geom_polygon(color = "gray", size = 0.25) +
     coord_map(projection = "albers", lat0 = 39, lat1 = 45) +
     theme_void() +
-    scale_fill_distiller(type = "div", palette = "PRGn") + #type div = divergent--we want it to diverge from 0
+    scale_fill_distiller(type = "div", palette = "PRGn", na.value = "orange") + #type div = divergent--we want it to diverge from 0
     labs(title = "Difference from State % of Pop. Receiving Schedule 2 Rx by County")
 ```
 #green = low, purple = high
