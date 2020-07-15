@@ -170,20 +170,34 @@ ma.percents <- full.rx %>%  #making a dataframe called ma.percents
 
 full.rx %>% #piping in full.rx, and doing a left join with the dataframe that we just made 
   left_join(ma.percents) %>% #bc full.rx is piped in, it's the left hand dataframe
-  mutate(difference = `Percent of County Pop w/ Rx` - ma.percent) %>% #making a column called "difference"...diff btwn county %age and MA %age
+  mutate(`difference in percent` = `Percent of County Pop w/ Rx` - ma.percent) %>% #making a column called "difference"...diff btwn county %age and MA %age
   # view()
   filter(County != "MA") %>% #removing MA county
   left_join(counties, by="county_name") %>% #joining it into the counties dataframe, which we need to make a map
   filter(state_name == "Massachusetts") %>% 
   filter(Year == 2016, Quarter == 1) %>% 
   ggplot() +
-    aes(long, lat, group = group, fill = `difference`) +
+    aes(long, lat, group = group, fill = `difference in percent`) +
     geom_polygon(color = "gray", size = 0.25) +
     coord_map(projection = "albers", lat0 = 39, lat1 = 45) +
     theme_void() +
-    scale_fill_distiller(type = "div", palette = "PRGn", na.value = "orange") + #type div = divergent--we want it to diverge from 0
-    labs(title = "Difference from State % of Pop. Receiving Schedule 2 Rx by County")
+  scale_fill_gradient2(
+    low = "blue",
+    mid = "white",
+    high = "red",
+    limits = c(-2,2),
+    midpoint = 0) + 
+  #scale_fill_distiller(type = "div", palette = "PRGn", na.value = "orange") + #type div = divergent--we want it to diverge from 0
+    labs(title = "County Deviations from State Average Percentage")
 ```
+
+scale_fill_gradient2(
+                    low = "blue", 
+                    mid = "white", 
+                    high = "red")
+
+
+
 #green = low, purple = high
 
 

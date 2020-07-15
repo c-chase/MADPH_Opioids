@@ -1,0 +1,10 @@
+name: madph_opioids
+title:
+username:
+account: cchase
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 2567315
+bundleId: 3387608
+url: https://cchase.shinyapps.io/madph_opioids/
+when: 1594670345.22934

@@ -117,7 +117,7 @@ ui <- fluidPage(
 
 server <- function(input, output) {
 
-    output$map1 <- renderPlot({
+    output$map1 <- renderCachedPlot({
         full.rx %>%
             filter("county_name" != "MA County")%>% 
             left_join(counties, by = "county_name") %>% 
@@ -130,9 +130,12 @@ server <- function(input, output) {
             theme_void() +
             scale_fill_viridis(colors = test, limits = c(0,10), na.value = "orange") #"limits" gives upper and lower bound 
         
-    })
+    },
+    cache = diskCache(),
+    cacheKeyExpr = list(input$year, input$quarter) #allows you to have a unique value for each cached plot
+    )
     
-    output$map2 <- renderPlot({
+    output$map2 <- renderCachedPlot({
         full.rx %>% #piping in full.rx, and doing a left join with the dataframe that we just made 
             left_join(ma.percents) %>% #bc full.rx is piped in, it's the left hand dataframe
             mutate(difference = `Percent of County Pop w/ Rx` - ma.percent) %>% #making a column called "difference"...diff btwn county %age and MA %age
@@ -145,10 +148,18 @@ server <- function(input, output) {
             aes(long, lat, group = group, fill = `difference`) +
             geom_polygon(color = "gray", size = 0.25) +
             coord_map(projection = "albers", lat0 = 39, lat1 = 45) +
-            theme_void() +
-            scale_fill_distiller(type = "div", palette = "PRGn", na.value = "orange") + #type div = divergent--we want it to diverge from 0
+            theme_void()  +
+            scale_fill_gradient2(
+                low = "blue",
+                mid = "white",
+                high = "red",
+                limits = c(-2,2),
+                midpoint = 0) + #manually setting the midpoint as zero 
             labs(title = "Difference from State % of Pop. Receiving Schedule 2 Rx by County")
-        })
+        },
+        cache = diskCache(),
+        cacheKeyExpr = list(input$year, input$quarter) #allows you to have a unique value for each cached plot
+        )
         
 }
 
